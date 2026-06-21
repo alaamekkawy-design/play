@@ -1,26 +1,7 @@
 #EXTM3U
-#EXTINF:-1 tvg-id="" tvg-name="STATUS" group-title="STATUS",STATUS
-https://sa.savpn.xyz/alaamekkawy2023/01003411188/1020304.m3u8
-#EXTINF:-1 tvg-id="" tvg-name="NOVA NEWS" tvg-logo="http://nova-photo.novalivetv.com/photo/NOVA-NEWS.png" group-title="NoVa Educational",NOVA NEWS
-https://sa.savpn.xyz/alaamekkawy2023/01003411188/70108.m3u8
-#EXTINF:-1 tvg-id="" tvg-name="وداعا اسامه ناجى" tvg-logo="http://photoxc.linkip.org/images/265221358_640753273957585_8923828763347030821_n.jpg" group-title="NoVa Educational",وداعا اسامه ناجى
-https://sa.savpn.xyz/alaamekkawy2023/01003411188/1032.m3u8
-#EXTINF:-1 tvg-id="" tvg-name="Madrasetna" tvg-logo="http://nova-photo.novalivetv.com:80/photo/Madrasetna.png" group-title="NoVa Educational",Madrasetna
-https://sa.savpn.xyz/alaamekkawy2023/01003411188/1092.m3u8
-#EXTINF:-1 tvg-id="" tvg-name="Madrasetna 2" tvg-logo="http://nova-photo.novalivetv.com:80/photo/Madrasetna.png" group-title="NoVa Educational",Madrasetna 2
-https://sa.savpn.xyz/alaamekkawy2023/01003411188/1091.m3u8
-#EXTINF:-1 tvg-id="" tvg-name="Madrasetna 3" tvg-logo="http://nova-photo.novalivetv.com:80/photo/Madrasetna.png" group-title="NoVa Educational",Madrasetna 3
-https://sa.savpn.xyz/alaamekkawy2023/01003411188/1090.m3u8
-#EXTINF:-1 tvg-id="" tvg-name="Egy EDUC  1" tvg-logo="http://nova-photo.novalivetv.com:80/photo/Egy-EDUC1.png" group-title="NoVa Educational",Egy EDUC  1
-https://sa.savpn.xyz/alaamekkawy2023/01003411188/1089.m3u8
-#EXTINF:-1 tvg-id="" tvg-name="iEN TV HD" tvg-logo="http://nova-photo.novalivetv.com:80/photo/iEN-Doros-04.png" group-title="NoVa Educational",iEN TV HD
-https://sa.savpn.xyz/alaamekkawy2023/01003411188/1085.m3u8
-#EXTINF:-1 tvg-id="" tvg-name="iEN Doros 01" tvg-logo="http://nova-photo.novalivetv.com/photo/iEN-Doros-04.png" group-title="NoVa Educational",iEN Doros 01
-https://sa.savpn.xyz/alaamekkawy2023/01003411188/1084.m3u8
-#EXTINF:-1 tvg-id="" tvg-name="iEN Doros 02" tvg-logo="http://nova-photo.novalivetv.com/photo/iEN-Doros-04.png" group-title="NoVa Educational",iEN Doros 02
-https://sa.savpn.xyz/alaamekkawy2023/01003411188/1083.m3u8
-#EXTINF:-1 tvg-id="" tvg-name="BEIN SPORT 1 MINI 512K" group-title="BEIN SPORT MINI 512K",BEIN SPORT 1 MINI 512K
-https://sa.savpn.xyz/alaamekkawy2023/01003411188/194432.m3u8
+
+#EXTINF:-1 tvg-id="" tvg-name="BEIN SPORT 1 MINI 512K" group-title="BEIN SPORT 512K",BEIN SPORT Max  512K
+https://so132.acmst.it.com/live/752877_.m3u8?session=_icsO1KtguuG5N3t3Vvx7MD05HK2NBN0r9xrj_HgkRtwM8ogIfAGMG1ZB5iSW57b3IyKfFRc9w9INQ5UVAQzrS6auuNcCFhN&location=local
 #EXTINF:-1 tvg-id="" tvg-name="BEIN SPORT 2 MINI 512K" group-title="BEIN SPORT MINI 512K",BEIN SPORT 2 MINI 512K
 https://sa.savpn.xyz/alaamekkawy2023/01003411188/618157.m3u8
 #EXTINF:-1 tvg-id="" tvg-name="BEIN SPORT 3 MINI 512K" group-title="BEIN SPORT MINI 512K",BEIN SPORT 3 MINI 512K
