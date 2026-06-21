@@ -190,6 +190,20 @@
             padding: 8px 15px;
             font-size: 13px;
         }
+        button.danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        button.danger:hover {
+            box-shadow: 0 5px 20px rgba(231, 76, 60, 0.4);
+        }
+        button.success {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+        }
+        button.success:hover {
+            box-shadow: 0 5px 20px rgba(46, 204, 113, 0.4);
+        }
         #status {
             text-align: center;
             padding: 10px;
@@ -214,11 +228,37 @@
         .hidden {
             display: none;
         }
+        .file-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 15px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            margin: 5px 0;
+            font-size: 13px;
+            color: #aaa;
+        }
+        .file-info .filename {
+            color: #ffd200;
+            font-weight: bold;
+        }
+        .file-info .timestamp {
+            color: #888;
+            font-size: 11px;
+        }
+        .refresh-animation {
+            animation: spin 0.5s linear;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Mekkawy</h1>
+        <h1>mekkawy</h1>
         <h1>📺 مشغل M3U / M3U8</h1>
         
         <!-- Tabs للتبديل بين المصادر -->
@@ -229,9 +269,12 @@
 
         <!-- قسم ملف M3U -->
         <div id="fileSection">
+            <div class="file-info">
+                <span>📄 الملف: <span class="filename" id="fileName">list.m3u</span></span>
+                <span class="timestamp" id="fileTimestamp">⏱ لم يتم التحميل</span>
+            </div>
             <div class="controls">
-                
-                <button onclick="loadLocalM3U()">📂 تحميل القائمة المحلية</button>
+                <button class="success" onclick="loadLocalM3U()">🔄 تحديث القائمة</button>
                 <button class="secondary" onclick="playNext()">⏭ التالي</button>
                 <button class="secondary" onclick="playPrevious()">⏮ السابق</button>
                 <span class="badge" id="channelCounter">0 قناة</span>
@@ -263,32 +306,32 @@
         </div>
         
         <div class="info">
-            💡 ضع ملف <strong>list.m3u</strong> في نفس المجلد أو استخدم رابط M3U8 مباشر
+            💡 ضع ملف <strong>list.m3u</strong> في نفس المجلد واضغط "تحديث القائمة"
         </div>
     </div>
 
     <script>
         let channels = [];
         let currentIndex = 0;
-        let currentMode = 'file'; // 'file' or 'url'
+        let currentMode = 'file';
+        let lastLoadTime = null;
         const video = document.getElementById('videoPlayer');
         const statusDiv = document.getElementById('status');
         const channelListDiv = document.getElementById('channelList');
         const channelCounter = document.getElementById('channelCounter');
+        const fileTimestamp = document.getElementById('fileTimestamp');
         let hlsInstance = null;
 
         // التبديل بين التبويبات
         function switchTab(mode) {
             currentMode = mode;
             
-            // تحديث التبويبات
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             if (mode === 'file') {
                 document.getElementById('tabFile').classList.add('active');
                 document.getElementById('fileSection').classList.remove('hidden');
                 document.getElementById('urlSection').classList.add('hidden');
                 channelListDiv.classList.add('active');
-                // إعادة تحميل القائمة إذا كانت فارغة
                 if (channels.length === 0) {
                     loadLocalM3U();
                 } else {
@@ -299,7 +342,6 @@
                 document.getElementById('fileSection').classList.add('hidden');
                 document.getElementById('urlSection').classList.remove('hidden');
                 channelListDiv.classList.remove('active');
-                // إيقاف التشغيل الحالي
                 if (hlsInstance) {
                     hlsInstance.destroy();
                     hlsInstance = null;
@@ -319,13 +361,11 @@
 
             statusDiv.textContent = '🔄 جاري تحميل الرابط...';
             
-            // إلغاء أي تشغيل سابق
             if (hlsInstance) {
                 hlsInstance.destroy();
                 hlsInstance = null;
             }
 
-            // تشغيل باستخدام HLS.js
             if (Hls.isSupported()) {
                 hlsInstance = new Hls({
                     enableWorker: true,
@@ -349,7 +389,6 @@
                     }
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                // دعم Safari
                 video.src = url;
                 video.play();
                 statusDiv.textContent = '✅ جاهز للتشغيل (Safari)';
@@ -358,19 +397,36 @@
             }
         }
 
-        // دالة قراءة ملف M3U المحلي
+        // دالة قراءة ملف M3U المحلي (مع منع الكاش)
         async function loadLocalM3U() {
             try {
-                statusDiv.textContent = '🔄 جاري قراءة ملف list.m3u...';
+                statusDiv.textContent = '🔄 جاري تحديث القائمة...';
                 
-                const response = await fetch('list.m3u');
+                // إضافة timestamp لمنع الكاش
+                const timestamp = Date.now();
+                const response = await fetch(`list.m3u?t=${timestamp}`, {
+                    cache: 'no-store',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
                 
                 if (!response.ok) {
                     throw new Error('ملف list.m3u غير موجود! تأكد من وجوده في نفس المجلد.');
                 }
                 
                 const text = await response.text();
+                
+                // حفظ وقت التحميل
+                lastLoadTime = new Date();
+                fileTimestamp.textContent = `⏱ آخر تحديث: ${lastLoadTime.toLocaleTimeString()}`;
+                
+                // إعادة تحليل الملف
                 parseM3U(text);
+                
+                statusDiv.textContent = `✅ تم تحديث القائمة (${channels.length} قناة)`;
                 
             } catch (error) {
                 statusDiv.textContent = '❌ ' + error.message;
@@ -380,13 +436,14 @@
                         <small style="color:#888;">ضع ملف list.m3u في نفس مجلد الصفحة</small>
                     </div>
                 `;
+                channelCounter.textContent = '0 قناة';
             }
         }
 
-        // دالة تحليل ملف M3U
+        // دالة تحليل ملف M3U (تفرغ القائمة القديمة)
         function parseM3U(data) {
             const lines = data.split('\n');
-            channels = [];
+            const newChannels = [];
             let currentChannel = { name: '', url: '' };
 
             for (let line of lines) {
@@ -401,11 +458,14 @@
                 else if (line && !line.startsWith('#')) {
                     currentChannel.url = line;
                     if (currentChannel.name && currentChannel.url) {
-                        channels.push({ ...currentChannel });
+                        newChannels.push({ ...currentChannel });
                         currentChannel = { name: '', url: '' };
                     }
                 }
             }
+
+            // استبدال القائمة القديمة بالقائمة الجديدة
+            channels = newChannels;
 
             if (channels.length === 0) {
                 statusDiv.textContent = '⚠️ لم يتم العثور على قنوات في الملف';
@@ -414,15 +474,19 @@
                         ⚠️ لا توجد قنوات في ملف list.m3u
                     </div>
                 `;
+                channelCounter.textContent = '0 قناة';
                 return;
             }
 
-            statusDiv.textContent = `✅ تم تحميل ${channels.length} قناة`;
             channelCounter.textContent = `${channels.length} قناة`;
             displayChannels();
             
+            // تشغيل أول قناة إذا كانت القائمة جديدة أو مختلفة
             if (channels.length > 0) {
-                currentIndex = 0;
+                // إذا كان المؤشر خارج النطاق أو القائمة تغيرت
+                if (currentIndex >= channels.length) {
+                    currentIndex = 0;
+                }
                 playChannel(currentIndex);
             }
         }
@@ -458,7 +522,6 @@
 
             const url = channel.url;
             
-            // إلغاء أي تشغيل سابق
             if (hlsInstance) {
                 hlsInstance.destroy();
                 hlsInstance = null;
@@ -518,7 +581,7 @@
 
         // دعم键盘 (الأسهم للتنقل)
         document.addEventListener('keydown', (e) => {
-            if (currentMode === 'file') {
+            if (currentMode === 'file' && channels.length > 0) {
                 if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
                     e.preventDefault();
                     playNext();
@@ -528,6 +591,27 @@
                 }
             }
         });
+
+        // مراقبة تغييرات الملف (كل 5 ثواني) - اختياري
+        let autoRefreshInterval = null;
+        
+        // تفعيل التحديث التلقائي (اختياري)
+        function toggleAutoRefresh(enable) {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+            if (enable) {
+                autoRefreshInterval = setInterval(() => {
+                    if (currentMode === 'file') {
+                        loadLocalM3U();
+                    }
+                }, 5000); // كل 5 ثواني
+            }
+        }
+
+        // تفعيل التحديث التلقائي (يمكنك إلغاء التعليق لو حبيت)
+        // toggleAutoRefresh(true);
     </script>
 </body>
 </html>
