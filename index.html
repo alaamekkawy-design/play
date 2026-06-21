@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mekkawy m3u Player</title>
+    <title>مشغل M3U / M3U8</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
-        /* نفس الستايلات السابقة */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
@@ -43,7 +46,37 @@
             overflow: hidden;
             margin-bottom: 20px;
         }
-        video { width: 100%; display: block; max-height: 500px; background: #000; }
+        video {
+            width: 100%;
+            display: block;
+            max-height: 500px;
+            background: #000;
+        }
+        .url-input-area {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        .url-input-area input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.05);
+            color: white;
+            font-size: 14px;
+            min-width: 200px;
+            transition: 0.3s;
+        }
+        .url-input-area input:focus {
+            outline: none;
+            border-color: #f7971e;
+            background: rgba(255,255,255,0.1);
+        }
+        .url-input-area input::placeholder {
+            color: #888;
+        }
         .controls {
             display: flex;
             gap: 12px;
@@ -51,6 +84,34 @@
             align-items: center;
             justify-content: center;
             margin: 15px 0;
+        }
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 5px;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: #888;
+            cursor: pointer;
+            transition: 0.3s;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .tab.active {
+            background: linear-gradient(135deg, #f7971e, #ffd200);
+            color: #1a1a2e;
+        }
+        .tab:hover:not(.active) {
+            background: rgba(255,255,255,0.1);
+            color: white;
         }
         .channel-list {
             background: rgba(255,255,255,0.05);
@@ -60,9 +121,18 @@
             overflow-y: auto;
             margin-top: 15px;
             border: 1px solid rgba(255,255,255,0.1);
+            display: none;
         }
-        .channel-list::-webkit-scrollbar { width: 8px; }
-        .channel-list::-webkit-scrollbar-thumb { background: #f7971e; border-radius: 10px; }
+        .channel-list.active {
+            display: block;
+        }
+        .channel-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        .channel-list::-webkit-scrollbar-thumb {
+            background: #f7971e;
+            border-radius: 10px;
+        }
         .channel-item {
             padding: 10px 15px;
             margin: 5px 0;
@@ -84,7 +154,9 @@
             background: rgba(247, 151, 30, 0.3);
             border-left-color: #ffd200;
         }
-        .channel-name { font-weight: 500; }
+        .channel-name {
+            font-weight: 500;
+        }
         .channel-number {
             color: #aaa;
             font-size: 12px;
@@ -103,12 +175,21 @@
             cursor: pointer;
             transition: 0.3s;
         }
-        button:hover { transform: scale(1.05); box-shadow: 0 5px 20px rgba(247, 151, 30, 0.4); }
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(247, 151, 30, 0.4);
+        }
         button.secondary {
             background: rgba(255,255,255,0.1);
             color: white;
         }
-        button.secondary:hover { background: rgba(255,255,255,0.2); }
+        button.secondary:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        button.small {
+            padding: 8px 15px;
+            font-size: 13px;
+        }
         #status {
             text-align: center;
             padding: 10px;
@@ -116,7 +197,12 @@
             font-size: 14px;
             min-height: 40px;
         }
-        .info { text-align: center; color: #888; font-size: 13px; margin-top: 10px; }
+        .info {
+            text-align: center;
+            color: #888;
+            font-size: 13px;
+            margin-top: 10px;
+        }
         .badge {
             display: inline-block;
             background: rgba(247, 151, 30, 0.2);
@@ -125,93 +211,165 @@
             color: #ffd200;
             font-size: 12px;
         }
-        .warning {
-            background: rgba(255, 0, 0, 0.2);
-            border: 1px solid #ff6b6b;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 10px 0;
-            color: #ff6b6b;
-            text-align: center;
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📺 مشغل M3U</h1>
+        <h1>📺 مشغل M3U / M3U8</h1>
         
-        <div class="warning" id="warningBox">
-            ⚠️ بعض القنوات قد لا تعمل بسبب قيود CORS
+        <!-- Tabs للتبديل بين المصادر -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('file')" id="tabFile">📁 ملف M3U</button>
+            <button class="tab" onclick="switchTab('url')" id="tabUrl">🔗 رابط M3U8</button>
         </div>
-        
+
+        <!-- قسم ملف M3U -->
+        <div id="fileSection">
+            <div class="controls">
+                <button onclick="loadLocalM3U()">📂 تحميل القائمة المحلية</button>
+                <button class="secondary" onclick="playNext()">⏭ التالي</button>
+                <button class="secondary" onclick="playPrevious()">⏮ السابق</button>
+                <span class="badge" id="channelCounter">0 قناة</span>
+            </div>
+        </div>
+
+        <!-- قسم رابط M3U8 -->
+        <div id="urlSection" class="hidden">
+            <div class="url-input-area">
+                <input type="text" id="m3u8Url" placeholder="الصق رابط M3U8 هنا (مثل: https://example.com/stream.m3u8)">
+                <button onclick="playM3U8Url()" class="small">▶️ تشغيل</button>
+            </div>
+            <div style="text-align:center;color:#888;font-size:13px;margin:5px 0;">
+                💡 أدخل رابط M3U8 مباشر وسيتم تشغيله فوراً
+            </div>
+        </div>
+
         <div class="player-wrapper">
             <video id="videoPlayer" controls></video>
         </div>
 
-        <div class="controls">
-            <button onclick="loadLocalM3U()">📂 تحميل القائمة</button>
-            <button class="secondary" onclick="playNext()">⏭ التالي</button>
-            <button class="secondary" onclick="playPrevious()">⏮ السابق</button>
-            <button class="secondary" onclick="toggleProxy()">🔄 Proxy: <span id="proxyStatus">تشغيل</span></button>
-            <span class="badge" id="channelCounter">0 قناة</span>
-        </div>
-
         <div id="status">📁 جاري تحميل list.m3u...</div>
 
-        <div class="channel-list" id="channelList">
-            <div style="text-align:center;color:#888;padding:20px;">⏳ انتظر تحميل القائمة...</div>
+        <!-- قائمة القنوات (تظهر فقط في وضع الملف) -->
+        <div class="channel-list active" id="channelList">
+            <div style="text-align:center;color:#888;padding:20px;">
+                ⏳ انتظر تحميل القائمة...
+            </div>
         </div>
         
         <div class="info">
-            💡 Mekkawy<strong>list.m3u</strong> 
+            💡 ضع ملف <strong>list.m3u</strong> في نفس المجلد أو استخدم رابط M3U8 مباشر
         </div>
     </div>
 
     <script>
         let channels = [];
         let currentIndex = 0;
-        let useProxy = true;
+        let currentMode = 'file'; // 'file' or 'url'
         const video = document.getElementById('videoPlayer');
         const statusDiv = document.getElementById('status');
         const channelListDiv = document.getElementById('channelList');
         const channelCounter = document.getElementById('channelCounter');
-        const proxyStatus = document.getElementById('proxyStatus');
+        let hlsInstance = null;
 
-        // Proxy services (جرب أي واحد منهم)
-        const PROXY_SERVICES = [
-            'https://corsproxy.io/?',
-            'https://api.allorigins.win/raw?url=',
-            'https://thingproxy.freeboard.io/fetch/'
-        ];
-
-        function toggleProxy() {
-            useProxy = !useProxy;
-            proxyStatus.textContent = useProxy ? 'تشغيل' : 'إيقاف';
-            // إعادة تحميل القناة الحالية
-            if (channels.length > 0) {
-                playChannel(currentIndex);
+        // التبديل بين التبويبات
+        function switchTab(mode) {
+            currentMode = mode;
+            
+            // تحديث التبويبات
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            if (mode === 'file') {
+                document.getElementById('tabFile').classList.add('active');
+                document.getElementById('fileSection').classList.remove('hidden');
+                document.getElementById('urlSection').classList.add('hidden');
+                channelListDiv.classList.add('active');
+                // إعادة تحميل القائمة إذا كانت فارغة
+                if (channels.length === 0) {
+                    loadLocalM3U();
+                } else {
+                    displayChannels();
+                }
+            } else {
+                document.getElementById('tabUrl').classList.add('active');
+                document.getElementById('fileSection').classList.add('hidden');
+                document.getElementById('urlSection').classList.remove('hidden');
+                channelListDiv.classList.remove('active');
+                // إيقاف التشغيل الحالي
+                if (hlsInstance) {
+                    hlsInstance.destroy();
+                    hlsInstance = null;
+                }
+                video.pause();
+                statusDiv.textContent = '🔗 أدخل رابط M3U8 وشغّل';
             }
         }
 
-        function getProxiedUrl(url) {
-            if (!useProxy) return url;
-            // تحويل HTTP إلى HTTPS إذا لزم الأمر
-            if (url.startsWith('http://')) {
-                url = url.replace('http://', 'https://');
+        // تشغيل رابط M3U8 مباشر
+        function playM3U8Url() {
+            const url = document.getElementById('m3u8Url').value.trim();
+            if (!url) {
+                statusDiv.textContent = '⚠️ الرجاء إدخال رابط M3U8 صالح';
+                return;
             }
-            // استخدام أول Proxy
-            return PROXY_SERVICES[0] + encodeURIComponent(url);
+
+            statusDiv.textContent = '🔄 جاري تحميل الرابط...';
+            
+            // إلغاء أي تشغيل سابق
+            if (hlsInstance) {
+                hlsInstance.destroy();
+                hlsInstance = null;
+            }
+
+            // تشغيل باستخدام HLS.js
+            if (Hls.isSupported()) {
+                hlsInstance = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                });
+                
+                hlsInstance.loadSource(url);
+                hlsInstance.attachMedia(video);
+                
+                hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+                    statusDiv.textContent = '✅ جاهز للتشغيل';
+                    video.play().catch(e => {
+                        statusDiv.textContent = '⚠️ اضغط زر التشغيل للمتابعة';
+                    });
+                });
+                
+                hlsInstance.on(Hls.Events.ERROR, (e, data) => {
+                    if (data.fatal) {
+                        statusDiv.textContent = '❌ فشل تشغيل الرابط';
+                        console.error('HLS Error:', data);
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // دعم Safari
+                video.src = url;
+                video.play();
+                statusDiv.textContent = '✅ جاهز للتشغيل (Safari)';
+            } else {
+                statusDiv.textContent = '❌ متصفحك لا يدعم تشغيل M3U8';
+            }
         }
 
+        // دالة قراءة ملف M3U المحلي
         async function loadLocalM3U() {
             try {
                 statusDiv.textContent = '🔄 جاري قراءة ملف list.m3u...';
+                
                 const response = await fetch('list.m3u');
+                
                 if (!response.ok) {
-                    throw new Error('ملف list.m3u غير موجود!');
+                    throw new Error('ملف list.m3u غير موجود! تأكد من وجوده في نفس المجلد.');
                 }
+                
                 const text = await response.text();
                 parseM3U(text);
+                
             } catch (error) {
                 statusDiv.textContent = '❌ ' + error.message;
                 channelListDiv.innerHTML = `
@@ -223,6 +381,7 @@
             }
         }
 
+        // دالة تحليل ملف M3U
         function parseM3U(data) {
             const lines = data.split('\n');
             channels = [];
@@ -230,12 +389,14 @@
 
             for (let line of lines) {
                 line = line.trim();
+                
                 if (line.startsWith('#EXTINF:')) {
                     const nameMatch = line.match(/,([^,]+)$/);
                     if (nameMatch) {
                         currentChannel.name = nameMatch[1].trim();
                     }
-                } else if (line && !line.startsWith('#')) {
+                } 
+                else if (line && !line.startsWith('#')) {
                     currentChannel.url = line;
                     if (currentChannel.name && currentChannel.url) {
                         channels.push({ ...currentChannel });
@@ -245,7 +406,7 @@
             }
 
             if (channels.length === 0) {
-                statusDiv.textContent = '⚠️ لم يتم العثور على قنوات';
+                statusDiv.textContent = '⚠️ لم يتم العثور على قنوات في الملف';
                 channelListDiv.innerHTML = `
                     <div style="text-align:center;color:#ffd200;padding:20px;">
                         ⚠️ لا توجد قنوات في ملف list.m3u
@@ -264,6 +425,7 @@
             }
         }
 
+        // عرض القنوات في القائمة
         function displayChannels() {
             channelListDiv.innerHTML = '';
             channels.forEach((channel, index) => {
@@ -281,6 +443,7 @@
             });
         }
 
+        // تشغيل قناة معينة
         function playChannel(index) {
             if (index < 0 || index >= channels.length) return;
             
@@ -291,50 +454,32 @@
                 el.classList.toggle('active', i === index);
             });
 
-            let url = channel.url;
+            const url = channel.url;
             
-            // إذا كان الرابط HTTP والصفحة HTTPS، نحوله لـ HTTPS
-            if (window.location.protocol === 'https:' && url.startsWith('http://')) {
-                url = url.replace('http://', 'https://');
-            }
-
-            // استخدام Proxy إذا كان مفعّل
-            if (useProxy) {
-                url = getProxiedUrl(url);
-            }
-
-            // إلغاء أي HLS سابق
-            if (window.hlsInstance) {
-                window.hlsInstance.destroy();
-                window.hlsInstance = null;
+            // إلغاء أي تشغيل سابق
+            if (hlsInstance) {
+                hlsInstance.destroy();
+                hlsInstance = null;
             }
 
             if (Hls.isSupported()) {
-                const hls = new Hls({
+                hlsInstance = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
                 });
-                window.hlsInstance = hls;
                 
-                hls.loadSource(url);
-                hls.attachMedia(video);
+                hlsInstance.loadSource(url);
+                hlsInstance.attachMedia(video);
                 
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
                     video.play().catch(e => {
                         statusDiv.textContent = `⚠️ ${channel.name}: اضغط زر التشغيل`;
                     });
                 });
                 
-                hls.on(Hls.Events.ERROR, (e, data) => {
+                hlsInstance.on(Hls.Events.ERROR, (e, data) => {
                     if (data.fatal) {
                         statusDiv.textContent = `❌ فشل تشغيل ${channel.name}`;
-                        // محاولة بدون Proxy
-                        if (useProxy) {
-                            statusDiv.textContent = `🔄 محاولة بدون Proxy...`;
-                            useProxy = false;
-                            proxyStatus.textContent = 'إيقاف';
-                            playChannel(index);
-                        }
                     }
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -357,17 +502,28 @@
             playChannel(currentIndex);
         }
 
+        // تحميل تلقائي عند فتح الصفحة
         window.onload = function() {
             loadLocalM3U();
         };
 
+        // دعم Enter في حقل الرابط
+        document.getElementById('m3u8Url').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                playM3U8Url();
+            }
+        });
+
+        // دعم键盘 (الأسهم للتنقل)
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-                e.preventDefault();
-                playNext();
-            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-                e.preventDefault();
-                playPrevious();
+            if (currentMode === 'file') {
+                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    playNext();
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    playPrevious();
+                }
             }
         });
     </script>
