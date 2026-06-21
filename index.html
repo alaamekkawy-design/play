@@ -113,6 +113,40 @@
             background: rgba(255,255,255,0.1);
             color: white;
         }
+        .search-area {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .search-area input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.05);
+            color: white;
+            font-size: 14px;
+            min-width: 150px;
+            transition: 0.3s;
+        }
+        .search-area input:focus {
+            outline: none;
+            border-color: #f7971e;
+            background: rgba(255,255,255,0.1);
+        }
+        .search-area input::placeholder {
+            color: #888;
+        }
+        .search-area .search-count {
+            color: #aaa;
+            font-size: 13px;
+            padding: 5px 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            white-space: nowrap;
+        }
         .channel-list {
             background: rgba(255,255,255,0.05);
             border-radius: 12px;
@@ -154,8 +188,19 @@
             background: rgba(247, 151, 30, 0.3);
             border-left-color: #ffd200;
         }
+        .channel-item.highlight {
+            background: rgba(247, 151, 30, 0.15);
+            border-left-color: #f7971e;
+        }
         .channel-name {
             font-weight: 500;
+        }
+        .channel-name .match {
+            color: #ffd200;
+            font-weight: bold;
+            background: rgba(247, 151, 30, 0.2);
+            padding: 0 4px;
+            border-radius: 3px;
         }
         .channel-number {
             color: #aaa;
@@ -190,19 +235,19 @@
             padding: 8px 15px;
             font-size: 13px;
         }
-        button.danger {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            color: white;
-        }
-        button.danger:hover {
-            box-shadow: 0 5px 20px rgba(231, 76, 60, 0.4);
-        }
         button.success {
             background: linear-gradient(135deg, #2ecc71, #27ae60);
             color: white;
         }
         button.success:hover {
             box-shadow: 0 5px 20px rgba(46, 204, 113, 0.4);
+        }
+        button.danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        button.danger:hover {
+            box-shadow: 0 5px 20px rgba(231, 76, 60, 0.4);
         }
         #status {
             text-align: center;
@@ -238,6 +283,8 @@
             margin: 5px 0;
             font-size: 13px;
             color: #aaa;
+            flex-wrap: wrap;
+            gap: 5px;
         }
         .file-info .filename {
             color: #ffd200;
@@ -247,18 +294,27 @@
             color: #888;
             font-size: 11px;
         }
-        .refresh-animation {
-            animation: spin 0.5s linear;
+        .last-channel {
+            background: rgba(46, 204, 113, 0.1);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #2ecc71;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .no-results {
+            text-align: center;
+            color: #888;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>mekkawy</h1>
         <h1>📺 مشغل M3U / M3U8</h1>
         
         <!-- Tabs للتبديل بين المصادر -->
@@ -271,8 +327,19 @@
         <div id="fileSection">
             <div class="file-info">
                 <span>📄 الملف: <span class="filename" id="fileName">list.m3u</span></span>
-                <span class="timestamp" id="fileTimestamp">⏱ لم يتم التحميل</span>
+                <span>
+                    <span class="timestamp" id="fileTimestamp">⏱ لم يتم التحميل</span>
+                    <span class="last-channel" id="lastChannelDisplay">💾 آخر قناة: لا يوجد</span>
+                </span>
             </div>
+            
+            <!-- شريط البحث -->
+            <div class="search-area">
+                <input type="text" id="searchInput" placeholder="🔍 ابحث عن قناة... (اكتب أول حروف الاسم)" oninput="searchChannels(this.value)">
+                <span class="search-count" id="searchCount">0 قناة</span>
+                <button class="small secondary" onclick="clearSearch()">✖ إلغاء</button>
+            </div>
+
             <div class="controls">
                 <button class="success" onclick="loadLocalM3U()">🔄 تحديث القائمة</button>
                 <button class="secondary" onclick="playNext()">⏭ التالي</button>
@@ -298,7 +365,7 @@
 
         <div id="status">📁 جاري تحميل list.m3u...</div>
 
-        <!-- قائمة القنوات (تظهر فقط في وضع الملف) -->
+        <!-- قائمة القنوات -->
         <div class="channel-list active" id="channelList">
             <div style="text-align:center;color:#888;padding:20px;">
                 ⏳ انتظر تحميل القائمة...
@@ -306,23 +373,54 @@
         </div>
         
         <div class="info">
-            💡 ضع ملف <strong>list.m3u</strong> في نفس المجلد واضغط "تحديث القائمة"
+            💡 ضع ملف <strong>list.m3u</strong> في نفس المجلد | ابحث بالحروف الأولى | يحفظ آخر قناة تلقائياً
         </div>
     </div>
 
     <script>
         let channels = [];
+        let filteredChannels = [];
         let currentIndex = 0;
         let currentMode = 'file';
         let lastLoadTime = null;
+        let searchQuery = '';
+        let lastChannelName = '';
+        
         const video = document.getElementById('videoPlayer');
         const statusDiv = document.getElementById('status');
         const channelListDiv = document.getElementById('channelList');
         const channelCounter = document.getElementById('channelCounter');
         const fileTimestamp = document.getElementById('fileTimestamp');
+        const searchInput = document.getElementById('searchInput');
+        const searchCount = document.getElementById('searchCount');
+        const lastChannelDisplay = document.getElementById('lastChannelDisplay');
         let hlsInstance = null;
 
-        // التبديل بين التبويبات
+        // ============ حفظ واسترجاع آخر قناة ============
+        function saveLastChannel(channelName, channelIndex) {
+            try {
+                localStorage.setItem('lastChannelName', channelName);
+                localStorage.setItem('lastChannelIndex', channelIndex.toString());
+                lastChannelDisplay.textContent = `💾 آخر قناة: ${channelName}`;
+            } catch (e) {
+                // تجاهل أخطاء localStorage
+            }
+        }
+
+        function getLastChannel() {
+            try {
+                const name = localStorage.getItem('lastChannelName');
+                const index = parseInt(localStorage.getItem('lastChannelIndex'));
+                if (name && !isNaN(index)) {
+                    return { name, index };
+                }
+            } catch (e) {
+                // تجاهل
+            }
+            return null;
+        }
+
+        // ============ التبديل بين التبويبات ============
         function switchTab(mode) {
             currentMode = mode;
             
@@ -351,7 +449,7 @@
             }
         }
 
-        // تشغيل رابط M3U8 مباشر
+        // ============ تشغيل رابط M3U8 مباشر ============
         function playM3U8Url() {
             const url = document.getElementById('m3u8Url').value.trim();
             if (!url) {
@@ -397,12 +495,11 @@
             }
         }
 
-        // دالة قراءة ملف M3U المحلي (مع منع الكاش)
+        // ============ قراءة ملف M3U المحلي ============
         async function loadLocalM3U() {
             try {
                 statusDiv.textContent = '🔄 جاري تحديث القائمة...';
                 
-                // إضافة timestamp لمنع الكاش
                 const timestamp = Date.now();
                 const response = await fetch(`list.m3u?t=${timestamp}`, {
                     cache: 'no-store',
@@ -419,11 +516,9 @@
                 
                 const text = await response.text();
                 
-                // حفظ وقت التحميل
                 lastLoadTime = new Date();
                 fileTimestamp.textContent = `⏱ آخر تحديث: ${lastLoadTime.toLocaleTimeString()}`;
                 
-                // إعادة تحليل الملف
                 parseM3U(text);
                 
                 statusDiv.textContent = `✅ تم تحديث القائمة (${channels.length} قناة)`;
@@ -437,10 +532,11 @@
                     </div>
                 `;
                 channelCounter.textContent = '0 قناة';
+                searchCount.textContent = '0 قناة';
             }
         }
 
-        // دالة تحليل ملف M3U (تفرغ القائمة القديمة)
+        // ============ تحليل ملف M3U ============
         function parseM3U(data) {
             const lines = data.split('\n');
             const newChannels = [];
@@ -464,7 +560,6 @@
                 }
             }
 
-            // استبدال القائمة القديمة بالقائمة الجديدة
             channels = newChannels;
 
             if (channels.length === 0) {
@@ -475,47 +570,152 @@
                     </div>
                 `;
                 channelCounter.textContent = '0 قناة';
+                searchCount.textContent = '0 قناة';
                 return;
             }
 
             channelCounter.textContent = `${channels.length} قناة`;
+            
+            // محاولة استرجاع آخر قناة
+            const lastChannel = getLastChannel();
+            let targetIndex = 0;
+            
+            if (lastChannel) {
+                // البحث عن القناة المحفوظة بالاسم
+                const foundIndex = channels.findIndex(ch => ch.name === lastChannel.name);
+                if (foundIndex !== -1) {
+                    targetIndex = foundIndex;
+                    lastChannelDisplay.textContent = `💾 آخر قناة: ${lastChannel.name} ✅`;
+                } else {
+                    lastChannelDisplay.textContent = `💾 آخر قناة: ${lastChannel.name} (غير موجودة)`;
+                }
+            }
+            
+            // التأكد من أن المؤشر في النطاق الصحيح
+            if (targetIndex >= channels.length) {
+                targetIndex = 0;
+            }
+            
+            currentIndex = targetIndex;
+            filteredChannels = [...channels];
             displayChannels();
             
-            // تشغيل أول قناة إذا كانت القائمة جديدة أو مختلفة
-            if (channels.length > 0) {
-                // إذا كان المؤشر خارج النطاق أو القائمة تغيرت
-                if (currentIndex >= channels.length) {
-                    currentIndex = 0;
-                }
-                playChannel(currentIndex);
-            }
+            // تشغيل القناة المحفوظة أو الأولى
+            playChannel(currentIndex);
+            
+            // مسح البحث
+            searchInput.value = '';
+            searchQuery = '';
+            searchCount.textContent = `${channels.length} قناة`;
         }
 
-        // عرض القنوات في القائمة
+        // ============ عرض القنوات ============
         function displayChannels() {
+            const listToShow = searchQuery ? filteredChannels : channels;
+            
+            if (listToShow.length === 0) {
+                channelListDiv.innerHTML = `
+                    <div class="no-results">
+                        🔍 لا توجد نتائج للبحث "<strong>${searchQuery}</strong>"
+                    </div>
+                `;
+                return;
+            }
+
             channelListDiv.innerHTML = '';
-            channels.forEach((channel, index) => {
+            
+            // تحديد القناة النشطة في القائمة المصفاة
+            let activeIndex = -1;
+            if (searchQuery) {
+                // في وضع البحث، نحدد النشاط بناءً على القناة الحالية
+                const currentChannel = channels[currentIndex];
+                if (currentChannel) {
+                    activeIndex = listToShow.findIndex(ch => ch.name === currentChannel.name);
+                }
+            } else {
+                activeIndex = currentIndex;
+            }
+            
+            listToShow.forEach((channel, index) => {
                 const div = document.createElement('div');
-                div.className = 'channel-item' + (index === currentIndex ? ' active' : '');
+                const isActive = (index === activeIndex);
+                div.className = 'channel-item' + (isActive ? ' active' : '');
+                
+                // إظهار النص مع تمييز الكلمات المطابقة
+                let displayName = channel.name;
+                if (searchQuery) {
+                    const regex = new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                    displayName = channel.name.replace(regex, '<span class="match">$1</span>');
+                }
+                
                 div.innerHTML = `
-                    <span class="channel-name">${channel.name}</span>
+                    <span class="channel-name">${displayName}</span>
                     <span class="channel-number">#${index + 1}</span>
                 `;
+                
+                const actualIndex = searchQuery ? channels.indexOf(channel) : index;
                 div.onclick = () => {
-                    currentIndex = index;
-                    playChannel(index);
+                    currentIndex = actualIndex;
+                    playChannel(actualIndex);
                 };
                 channelListDiv.appendChild(div);
             });
+            
+            // تمرير إلى القناة النشطة
+            const activeElement = channelListDiv.querySelector('.channel-item.active');
+            if (activeElement) {
+                activeElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }
         }
 
-        // تشغيل قناة معينة
+        // ============ البحث في القنوات ============
+        function searchChannels(query) {
+            searchQuery = query.trim();
+            
+            if (!searchQuery) {
+                filteredChannels = [...channels];
+                searchCount.textContent = `${channels.length} قناة`;
+                displayChannels();
+                return;
+            }
+
+            // بحث بالحروف الأولى (بداية الكلمة) أو أي جزء
+            const regex = new RegExp(searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+            filteredChannels = channels.filter(ch => regex.test(ch.name));
+            
+            searchCount.textContent = `${filteredChannels.length} من ${channels.length}`;
+            displayChannels();
+            
+            // تشغيل أول نتيجة إذا وجدت
+            if (filteredChannels.length > 0 && searchQuery.length > 1) {
+                const firstMatch = channels.indexOf(filteredChannels[0]);
+                if (firstMatch !== -1) {
+                    currentIndex = firstMatch;
+                    playChannel(firstMatch);
+                }
+            }
+        }
+
+        function clearSearch() {
+            searchInput.value = '';
+            searchQuery = '';
+            filteredChannels = [...channels];
+            searchCount.textContent = `${channels.length} قناة`;
+            displayChannels();
+        }
+
+        // ============ تشغيل قناة ============
         function playChannel(index) {
             if (index < 0 || index >= channels.length) return;
             
             const channel = channels[index];
+            currentIndex = index;
             statusDiv.textContent = `▶️ تشغيل: ${channel.name}`;
             
+            // حفظ آخر قناة
+            saveLastChannel(channel.name, index);
+            
+            // تحديث القائمة المظللة
             document.querySelectorAll('.channel-item').forEach((el, i) => {
                 el.classList.toggle('active', i === index);
             });
@@ -555,33 +755,69 @@
             }
         }
 
+        // ============ التنقل بين القنوات ============
         function playNext() {
             if (channels.length === 0) return;
             currentIndex = (currentIndex + 1) % channels.length;
             playChannel(currentIndex);
+            // إلغاء البحث عند التنقل
+            if (searchQuery) {
+                clearSearch();
+            }
         }
 
         function playPrevious() {
             if (channels.length === 0) return;
             currentIndex = (currentIndex - 1 + channels.length) % channels.length;
             playChannel(currentIndex);
+            if (searchQuery) {
+                clearSearch();
+            }
         }
 
-        // تحميل تلقائي عند فتح الصفحة
+        // ============ التحميل التلقائي ============
         window.onload = function() {
             loadLocalM3U();
+            
+            // عرض آخر قناة محفوظة
+            const last = getLastChannel();
+            if (last) {
+                lastChannelDisplay.textContent = `💾 آخر قناة: ${last.name}`;
+            }
         };
 
-        // دعم Enter في حقل الرابط
+        // ============ دعم Enter في البحث والرابط ============
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (filteredChannels.length > 0) {
+                    const firstMatch = channels.indexOf(filteredChannels[0]);
+                    if (firstMatch !== -1) {
+                        currentIndex = firstMatch;
+                        playChannel(firstMatch);
+                    }
+                }
+            }
+        });
+
         document.getElementById('m3u8Url').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 playM3U8Url();
             }
         });
 
-        // دعم键盘 (الأسهم للتنقل)
+        // ============ دعم键盘 ============
         document.addEventListener('keydown', (e) => {
+            // Ctrl+F للبحث
+            if (e.ctrlKey && e.key === 'f') {
+                e.preventDefault();
+                document.getElementById('searchInput').focus();
+                document.getElementById('searchInput').select();
+                return;
+            }
+            
             if (currentMode === 'file' && channels.length > 0) {
+                // الأسهم للتنقل
                 if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
                     e.preventDefault();
                     playNext();
@@ -589,29 +825,13 @@
                     e.preventDefault();
                     playPrevious();
                 }
+                // Esc لإلغاء البحث
+                else if (e.key === 'Escape') {
+                    clearSearch();
+                    document.getElementById('searchInput').blur();
+                }
             }
         });
-
-        // مراقبة تغييرات الملف (كل 5 ثواني) - اختياري
-        let autoRefreshInterval = null;
-        
-        // تفعيل التحديث التلقائي (اختياري)
-        function toggleAutoRefresh(enable) {
-            if (autoRefreshInterval) {
-                clearInterval(autoRefreshInterval);
-                autoRefreshInterval = null;
-            }
-            if (enable) {
-                autoRefreshInterval = setInterval(() => {
-                    if (currentMode === 'file') {
-                        loadLocalM3U();
-                    }
-                }, 5000); // كل 5 ثواني
-            }
-        }
-
-        // تفعيل التحديث التلقائي (يمكنك إلغاء التعليق لو حبيت)
-        // toggleAutoRefresh(true);
     </script>
 </body>
 </html>
